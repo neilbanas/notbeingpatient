@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Tangle document</title>
+
+	<!-- Tangle -->
+	<script type="text/javascript" src="Tangle.js"></script>
+
+	<!-- TangleKit (optional) -->
+	<link rel="stylesheet" href="TangleKit/TangleKit.css" type="text/css">
+	<script type="text/javascript" src="TangleKit/mootools.js"></script>
+	<script type="text/javascript" src="TangleKit/sprintf.js"></script>
+	<script type="text/javascript" src="TangleKit/BVTouchable.js"></script>
+	<script type="text/javascript" src="TangleKit/TangleKit.js"></script>
+
+	<!-- example -->
+	<script type="text/javascript">
+
+		function setUpTangle () {
+
+			var element = document.getElementById("example");
+
+			var tangle = new Tangle(element, {
+				initialize: function () {
+					this.uncomm = 1;
+					this.chanceOfPerformance_percent = 100;
+					this.chanceOfPerformance_percent_biased = 95;
+					this.performancesForCommission = 20;				
+					this.performancesForCommission_biased = 21;				
+					this.maxWorksPerYear = 5;
+					this.years = 30;
+					this.moneyPerPerformance = 20;
+					this.moneyPerCommission = 2000;
+				},
+				update: function () {
+					var p = this.chanceOfPerformance_percent / 100.;
+					var pb = this.chanceOfPerformance_percent_biased / 100.;
+					var Wmax = this.maxWorksPerYear;
+					var Nc = this.performancesForCommission;
+					var Ncb = this.performancesForCommission_biased;					
+					var c0 = this.uncomm;
+					
+					var W = new Array(this.years);
+					var N = new Array(this.years);
+					var Wb = new Array(this.years);
+					var Nb = new Array(this.years);
+					
+					var p_to_the = new Array(this.years);
+					p_to_the[0] = 1;
+					for (var i=1; i<this.years; i++) p_to_the[i] = p_to_the[i-1] * p;
+					var pb_to_the = new Array(this.years);
+					pb_to_the[0] = 1;
+					for (var i=1; i<this.years; i++) pb_to_the[i] = pb_to_the[i-1] * pb;
+					
+					N[0] = 1;
+					Nb[0] = 1;
+					W[0] = 1;
+					Wb[0] = 1;
+					var unc = 0;
+					var unc_biased = 0;
+					for (var t=1; t<this.years; t++) {
+						W[t] = c0 + N[t-1] / Nc;
+						if (W[t]>Wmax) W[t] = Wmax;
+						unc += c0;
+						Wb[t] = c0 + Nb[t-1] / Ncb;
+						if (Wb[t]>Wmax) Wb[t] = Wmax;
+						unc_biased += c0;
+						N[t] = 0;
+						Nb[t] = 0;
+						for (var tc=0; tc<=t; tc++) {
+							N[t] += W[tc] * p_to_the[t-tc];
+							Nb[t] += Wb[tc] * pb_to_the[t-tc]
+						}
+					}
+					
+					this.perfPerYear = N[this.years-1];
+					this.perfPerYear_biased = Nb[this.years-1];
+					this.worksPerYear = W[this.years-1];
+					this.worksPerYear_biased = Wb[this.years-1];
+					this.totalWorks = 0;
+					this.totalWorks_biased = 0;
+					this.totalPerf = 0;
+					this.totalPerf_biased = 0;
+					for (var t=0; t<this.years; t++) {
+						this.totalWorks += W[t];
+						this.totalWorks_biased += Wb[t];
+						this.totalPerf += N[t];
+						this.totalPerf_biased += Nb[t];
+					}
+					
+					this.commissioned_percent = (1 - unc / this.totalWorks) * 100;
+					this.commissioned_biased_percent = (1 - unc_biased / this.totalWorks_biased) * 100;
+					this.perfPerYear_biased_percent = this.perfPerYear_biased / this.perfPerYear * 100;
+					
+					this.moneyPerYear = N[this.years-1] * this.moneyPerPerformance + (W[this.years-1]-c0) * this.moneyPerCommission;
+					this.moneyPerYear = 100 * Math.round(this.moneyPerYear/100);
+					this.moneyPerYear_biased = Nb[this.years-1] * this.moneyPerPerformance + (Wb[this.years-1]-c0) * this.moneyPerCommission;
+					this.moneyPerYear_biased = 100 * Math.round(this.moneyPerYear_biased/100);
+				}
+			});
+		}
+
+	</script>
+</head>
+
+<body onload="setUpTangle();">
+
+	<div id="example">
+		<p>
+		<strong>Matthew</strong> writes
+		<strong><span data-var="uncomm" class="TKAdjustableNumber" data-min="0" data-max="5" data-step="1"> new piece(s)</span></strong>
+		without a commission each year.
+		</p>
+		
+		<p>
+		Each of his works has a
+		<strong><span data-var="chanceOfPerformance_percent" class="TKAdjustableNumber" data-min="0" data-max="100" data-step="1">% chance</span></strong>
+		of being performed the year it is written. Each time it gets performed, it has the same chance of being performed the following year.
+		</p>
+		
+		<p>
+		He receives a new commission every
+		<strong><span data-var="performancesForCommission" class="TKAdjustableNumber" data-min="2" data-max="50" data-step="1"> performances</span></strong>
+		(although he never composes more than
+		<strong><span data-var="maxWorksPerYear" class="TKAdjustableNumber" data-min="2" data-max="10"> pieces</span></strong> per year).
+		</p>
+		
+		<p>
+		He receives an average of
+		<strong>$<span data-var="moneyPerPerformance" class="TKAdjustableNumber" data-min="0" data-max="500" data-step="10"></span></strong>
+		in royalties for each performance, and an average of
+		<strong>$<span data-var="moneyPerCommission" class="TKAdjustableNumber" data-min="500" data-max="20000" data-step="100"></span></strong>
+		for each commission. 
+		</p>
+		
+		<p>
+			&nbsp;
+		</p>
+		
+		<p>
+		<strong>Mathilda</strong> does everything exactly the same, except that for her, the chances of a performance are
+		<strong><span data-var="chanceOfPerformance_percent_biased" class="TKAdjustableNumber" data-min="0" data-max="100" data-step="1">%</span></strong>,
+		 not <span data-var="chanceOfPerformance_percent">%</span>, and she receives a new commission after every
+		<strong><span data-var="performancesForCommission_biased" class="TKAdjustableNumber" data-min="2" data-max="50" data-step="1"> performances</span></strong>,
+		not <span data-var="performancesForCommission"></span>.
+		</p>
+		
+		<p>
+			&nbsp;
+		</p>
+		
+		<p>
+		After <strong><span data-var="years" class="TKAdjustableNumber" data-min="5" data-max="60" data-step="5"> years</span></strong>,
+		Matthew has about <strong><span data-var="perfPerYear" data-format = "%d"> performances</span></strong> per year, and Mathilda has about
+		<strong><span data-var="perfPerYear_biased" data-format="%d"></span></strong>
+		(<span data-var="perfPerYear_biased_percent" data-format="%d">%</span> as many).
+		They have composed
+		<span data-var="totalWorks" data-format="%d"></span> and
+		<span data-var="totalWorks_biased" data-format="%d"></span> works, respectively,
+		of which <span data-var="commissioned_percent" data-format="%d">%</span> and
+		<span data-var="commissioned_biased_percent" data-format="%d">%</span> were commissioned.
+		At this point in his career, Matthew earns
+		$<span data-var="moneyPerYear" data-format="%d"></span>
+		from composing in a typical year, while Mathilda earns
+		$<span data-var="moneyPerYear_biased" data-format="%d"></span>.
+		</p>
+
+	</div>
+
+</body>
+</html>
